@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from data.mock_shipments import generate_mock_data
 from datetime import datetime
+from utils.export_utils import generate_csv_download_link, generate_pdf_report, parse_uploaded_csv
+from utils.weather_utils import get_route_weather
+from utils.notification_utils import NotificationManager
 
 st.set_page_config(
     page_title="Logistics Predictor",
@@ -30,6 +33,33 @@ def main():
     if 'show_new_shipment' not in st.session_state:
         st.session_state.show_new_shipment = False
 
+    # Batch Upload Section
+    st.sidebar.subheader("📤 Batch Operations")
+    uploaded_file = st.sidebar.file_uploader("Upload Shipments CSV", type="csv")
+    if uploaded_file is not None:
+        df, error = parse_uploaded_csv(uploaded_file)
+        if error:
+            st.sidebar.error(error)
+        else:
+            if st.sidebar.button("Process Uploaded Shipments"):
+                st.session_state.shipment_data = pd.concat([df, st.session_state.shipment_data], ignore_index=True)
+                st.sidebar.success(f"Added {len(df)} new shipments!")
+
+    # Export Options
+    export_format = st.sidebar.selectbox("Export Format", ["CSV", "PDF"])
+    if st.sidebar.button("Export Data"):
+        if export_format == "CSV":
+            href = generate_csv_download_link(st.session_state.shipment_data)
+            st.sidebar.markdown(f'<a href="{href}" download="shipments.csv">Download CSV</a>', unsafe_allow_html=True)
+        else:
+            pdf_html = generate_pdf_report(st.session_state.shipment_data)
+            st.sidebar.download_button(
+                "Download PDF",
+                pdf_html,
+                "shipments.pdf",
+                "text/html"
+            )
+
     # Dashboard Overview
     col1, col2, col3 = st.columns(3)
 
@@ -40,7 +70,7 @@ def main():
         st.metric(
             label="Active Shipments",
             value=active_shipments,
-            delta=f"{active_shipments - 95}" # Example baseline
+            delta=f"{active_shipments - 95}"  # Example baseline
         )
 
     with col2:
@@ -61,14 +91,26 @@ def main():
             delta="-0.5 hours"
         )
 
-    # Recent Shipments Table
+    # Recent Shipments Table with Weather Info
     st.subheader("Recent Shipments")
-    st.dataframe(
-        st.session_state.shipment_data.head(5)[
-            ['shipment_id', 'origin', 'destination', 'status', 'predicted_delay']
-        ],
-        use_container_width=True
-    )
+    recent_shipments = st.session_state.shipment_data.head(5)
+
+    for _, shipment in recent_shipments.iterrows():
+        with st.expander(f"Shipment {shipment['shipment_id']}"):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write(f"Origin: {shipment['origin']}")
+                st.write(f"Destination: {shipment['destination']}")
+                st.write(f"Status: {shipment['status']}")
+
+            with col2:
+                # Get real-time weather data
+                weather_info = get_route_weather(shipment['origin'], shipment['destination'])
+                st.write("📍 Origin Weather:", weather_info['origin']['weather']['condition'])
+                st.write("🎯 Destination Weather:", weather_info['destination']['weather']['condition'])
+                if weather_info['route_risk']['risk_level'] != 'Low':
+                    st.warning(f"Weather Risk: {weather_info['route_risk']['risk_level']}")
 
     # Quick Actions
     st.subheader("Quick Actions")
@@ -106,6 +148,12 @@ def main():
                     options=['Clear', 'Rain', 'Snow', 'Storm']
                 )
 
+            # Add notification options
+            st.subheader("Notification Preferences")
+            notify_customer = st.checkbox("Send notifications to customer")
+            if notify_customer:
+                phone_number = st.text_input("Customer Phone Number (with country code)")
+
             if st.form_submit_button("Create Shipment"):
                 # Add new shipment to the data
                 new_data = pd.DataFrame({
@@ -121,6 +169,20 @@ def main():
                     [new_data, st.session_state.shipment_data],
                     ignore_index=True
                 )
+
+                # Send notification if requested
+                if notify_customer and phone_number:
+                    notification_manager = NotificationManager()
+                    result = notification_manager.send_sms_notification(
+                        phone_number,
+                        f"Your shipment {new_data['shipment_id'].iloc[0]} has been created. "
+                        f"Origin: {origin}, Destination: {destination}"
+                    )
+                    if result['success']:
+                        st.success("Notification sent successfully!")
+                    else:
+                        st.error(f"Failed to send notification: {result['error']}")
+
                 st.success("New shipment created successfully!")
                 st.session_state.show_new_shipment = False
                 st.session_state.shipment_created = True
