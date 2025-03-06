@@ -192,34 +192,21 @@ def main():
 
                 # Send notification if requested
                 if notify_customer and customer_email:
-                    st.info(f"Attempting to send email notification to {customer_email}...")
-                    
-                    # Use the NotificationManager directly
-                    notification_manager = NotificationManager()
-                    
-                    # Log for debugging purposes
-                    import logging
-                    logging.info(f"Sending new shipment notification to {customer_email}")
-                    
-                    result = notification_manager.send_email_notification(
-                        customer_email,
-                        f"New Shipment Created: {new_data['shipment_id'].iloc[0]}",
-                        f"Your shipment {new_data['shipment_id'].iloc[0]} has been created.\n\n"
-                        f"Origin: {origin}\n"
-                        f"Destination: {destination}\n"
-                        f"Weather: {weather}\n\n"
-                        f"Thank you for using our Smart Logistics Platform!"
-                    )
-                    
-                    if result['success']:
-                        st.success("Email notification sent successfully!")
-                    else:
-                        st.error(f"Failed to send email notification: {result.get('error', 'Unknown error')}")
-                        
-                        # Display more detailed error information
+                    with st.spinner(f"Sending email notification to {customer_email}..."):
+                        # Import logging and os
+                        import logging
                         import os
+                        
+                        # Set up logging
+                        logging.basicConfig(level=logging.INFO)
+                        logger = logging.getLogger(__name__)
+                        
+                        # Log attempt
+                        logger.info(f"Attempting to send email notification to {customer_email}")
+                        
+                        # Check for environment variables first
                         email_sender = os.environ.get("EMAIL_SENDER")
-                        email_password = os.environ.get("EMAIL_PASSWORD", "")
+                        email_password = os.environ.get("EMAIL_PASSWORD")
                         email_smtp = os.environ.get("EMAIL_SMTP_SERVER")
                         
                         if not email_sender or not email_password or not email_smtp:
@@ -227,8 +214,44 @@ def main():
                             if not email_sender: missing.append("EMAIL_SENDER")
                             if not email_password: missing.append("EMAIL_PASSWORD") 
                             if not email_smtp: missing.append("EMAIL_SMTP_SERVER")
-                            st.error(f"Missing credentials: {', '.join(missing)}")
+                            st.error(f"Missing email credentials: {', '.join(missing)}")
                             st.info("Please set these environment variables in the Replit Secrets tool.")
+                            st.code("""
+# In Replit's Secrets tool, add:
+EMAIL_SENDER=your.email@example.com
+EMAIL_PASSWORD=your-email-password
+EMAIL_SMTP_SERVER=smtp.example.com
+EMAIL_SMTP_PORT=587
+                            """)
+                        else:
+                            # Create notification manager
+                            notification_manager = NotificationManager()
+                            
+                            # Prepare email content
+                            subject = f"New Shipment Created: {new_data['shipment_id'].iloc[0]}"
+                            body = (f"Your shipment {new_data['shipment_id'].iloc[0]} has been created.\n\n"
+                                   f"Origin: {origin}\n"
+                                   f"Destination: {destination}\n"
+                                   f"Weather: {weather}\n\n"
+                                   f"Thank you for using our Smart Logistics Platform!")
+                            
+                            # Send notification
+                            logger.info(f"Sending email with subject: {subject}")
+                            result = notification_manager.send_email_notification(
+                                customer_email,
+                                subject,
+                                body
+                            )
+                            
+                            # Handle result
+                            if result.get('success'):
+                                st.success("Email notification sent successfully!")
+                            else:
+                                st.error(f"Failed to send email notification: {result.get('error', 'Unknown error')}")
+                                st.info("Please check your email configuration in the Replit Secrets tool.")
+                                
+                                # Log the error for debugging
+                                logger.error(f"Email send failed: {result.get('error')}")
 
                 st.success("New shipment created successfully!")
                 st.session_state.show_new_shipment = False
