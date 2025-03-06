@@ -127,8 +127,6 @@ def main():
     # Show last refresh time
     st.caption(f"Last updated: {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Notifications have been removed from this version
-
     # New Shipment Form
     if st.session_state.show_new_shipment:
         st.subheader("Create New Shipment")
