@@ -2,6 +2,7 @@ import os
 from twilio.rest import Client
 from datetime import datetime
 import json
+from twilio.base.exceptions import TwilioRestException
 
 # Initialize Twilio client
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
@@ -15,10 +16,14 @@ class NotificationManager:
             self.twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
     def send_sms_notification(self, to_number, message):
-        """Send SMS notification using Twilio"""
+        """Send SMS notification using Twilio with improved error handling"""
         try:
             if not self.twilio_client:
                 return {"success": False, "error": "Twilio credentials not configured"}
+
+            # Validate phone number format
+            if not to_number.startswith('+'):
+                to_number = '+' + to_number
 
             message = self.twilio_client.messages.create(
                 body=message,
@@ -26,8 +31,22 @@ class NotificationManager:
                 to=to_number
             )
             return {"success": True, "message_id": message.sid}
+
+        except TwilioRestException as e:
+            if e.code == 21408:  # Region permission error
+                return {
+                    "success": False,
+                    "error": f"SMS sending is not enabled for this region. Please verify the phone number {to_number} is in a supported region."
+                }
+            elif e.code == 21211:  # Invalid phone number
+                return {
+                    "success": False,
+                    "error": "Invalid phone number format. Please include country code (e.g., +1 for US numbers)."
+                }
+            else:
+                return {"success": False, "error": str(e)}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": f"Failed to send SMS: {str(e)}"}
 
     def format_status_update(self, shipment_data, status_analysis):
         """Format shipment status update message"""
@@ -49,6 +68,7 @@ Recommendations:
 def save_notification_preferences(user_id, preferences):
     """Save user notification preferences"""
     try:
+        os.makedirs('data/notifications', exist_ok=True)
         with open(f'data/notifications/{user_id}.json', 'w') as f:
             json.dump(preferences, f)
         return True

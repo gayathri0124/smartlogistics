@@ -30,29 +30,35 @@ def render_notification_settings():
     # SMS Notifications
     st.subheader("📱 SMS Notifications")
     sms_enabled = st.toggle("Enable SMS Notifications", preferences["sms_enabled"])
-    
+
     if sms_enabled:
         phone_number = st.text_input(
-            "Phone Number (with country code)",
-            preferences["phone_number"]
+            "Phone Number",
+            preferences["phone_number"],
+            help="Include country code (e.g., +1 for US numbers)"
         )
-        
+
         # Test SMS
         if st.button("Test SMS Notification"):
-            with st.spinner("Sending test SMS..."):
-                result = notification_manager.send_sms_notification(
-                    phone_number,
-                    "This is a test notification from your Smart Logistics Platform!"
-                )
-                if result["success"]:
-                    st.success("Test SMS sent successfully!")
-                else:
-                    st.error(f"Failed to send SMS: {result['error']}")
+            if not phone_number:
+                st.error("Please enter a phone number")
+            elif not phone_number.startswith('+'):
+                st.error("Please include country code (e.g., +1 for US numbers)")
+            else:
+                with st.spinner("Sending test SMS..."):
+                    result = notification_manager.send_sms_notification(
+                        phone_number,
+                        "This is a test notification from your Smart Logistics Platform!"
+                    )
+                    if result["success"]:
+                        st.success("Test SMS sent successfully!")
+                    else:
+                        st.error(result["error"])
 
     # Email Notifications (placeholder for future implementation)
     st.subheader("📧 Email Notifications")
     email_enabled = st.toggle("Enable Email Notifications", preferences["email_enabled"])
-    
+
     if email_enabled:
         email = st.text_input("Email Address", preferences["email"])
 
@@ -82,7 +88,7 @@ def render_notification_settings():
             "notify_on_delay": notify_delay,
             "notify_on_weather": notify_weather
         }
-        
+
         if save_notification_preferences(user_id, new_preferences):
             st.success("Preferences saved successfully!")
         else:
