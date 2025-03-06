@@ -4,6 +4,7 @@ from data.mock_shipments import generate_mock_data
 from datetime import datetime
 from utils.export_utils import generate_csv_download_link, generate_pdf_report, parse_uploaded_csv
 from utils.weather_utils import get_route_weather
+# Notification functionality has been removed
 
 st.set_page_config(
     page_title="Logistics Predictor",
