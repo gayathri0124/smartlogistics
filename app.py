@@ -152,7 +152,7 @@ def main():
             st.subheader("Notification Preferences")
             notify_customer = st.checkbox("Send notifications to customer")
             if notify_customer:
-                phone_number = st.text_input("Customer Phone Number (with country code)")
+                customer_email = st.text_input("Customer Email Address (with country code)")
 
             if st.form_submit_button("Create Shipment"):
                 # Add new shipment to the data
