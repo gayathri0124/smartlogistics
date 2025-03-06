@@ -3,6 +3,8 @@ import folium
 from streamlit_folium import folium_static
 from utils.viz_utils import create_shipment_map
 from utils.data_utils import filter_shipments
+from utils.llm_utils import analyze_shipment_status
+import json
 
 def render_tracking_page():
     st.title("📍 Shipment Tracking")
@@ -47,21 +49,43 @@ def render_tracking_page():
         if not shipment.empty:
             shipment = shipment.iloc[0]
 
-            # Shipment Details
+            # Get AI analysis
+            with st.spinner("Analyzing shipment status..."):
+                analysis = json.loads(analyze_shipment_status(shipment))
+
+            # Shipment Details with AI Analysis
             col1, col2 = st.columns(2)
 
             with col1:
                 st.subheader("Shipment Details")
                 st.write(f"Origin: {shipment['origin']}")
                 st.write(f"Destination: {shipment['destination']}")
-                st.write(f"Status: {shipment['status']}")
+                st.write(f"Current Status: {analysis['updated_status']}")
                 st.write(f"Weather: {shipment['weather_condition']}")
+
+                # Risk Level Indicator
+                risk_color = {
+                    "Low": "green",
+                    "Medium": "yellow",
+                    "High": "red"
+                }.get(analysis['risk_level'], "gray")
+
+                st.markdown(f"""
+                    <div style='padding: 10px; background-color: {risk_color}; border-radius: 5px;'>
+                        Risk Level: {analysis['risk_level']}
+                    </div>
+                    """, unsafe_allow_html=True)
 
             with col2:
                 st.subheader("Timing")
                 st.write(f"Departure: {shipment['departure_time']}")
                 st.write(f"Estimated Arrival: {shipment['estimated_arrival']}")
                 st.write(f"Predicted Delay: {shipment['predicted_delay']:.1f} hours")
+
+                # AI Recommendations
+                st.subheader("AI Recommendations")
+                for rec in analysis['recommendations']:
+                    st.write(f"• {rec}")
 
             # Map
             st.subheader("Route Map")
