@@ -1,6 +1,6 @@
 import os
+import json
 from openai import OpenAI
-from datetime import datetime
 
 # Initialize OpenAI client
 client = OpenAI()
@@ -35,15 +35,16 @@ def analyze_shipment_status(shipment_data):
             ],
             response_format={"type": "json_object"}
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content  # This is already a JSON string
     except Exception as e:
-        return {
+        # Return a JSON string instead of a dictionary
+        return json.dumps({
             "updated_status": shipment_data['status'],
             "risk_level": "Unknown",
             "recommendations": [f"Error in status analysis: {str(e)}"],
             "eta_confidence": 0.0,
             "route_analysis": "Unable to analyze route due to error"
-        }
+        })
 
 def generate_delay_insights(historical_data):
     """
