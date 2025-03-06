@@ -173,14 +173,19 @@ def main():
                 # Send notification if requested
                 if notify_customer and customer_email:
                     notification_manager = NotificationManager()
-                    # Email notification would be implemented here in the future
-                    # For now, just show a success message
-                    st.success(f"Email notification would be sent to {customer_email}")
-                    result = {"success": True}
+                    result = notification_manager.send_email_notification(
+                        customer_email,
+                        f"New Shipment Created: {new_data['shipment_id'].iloc[0]}",
+                        f"Your shipment {new_data['shipment_id'].iloc[0]} has been created.\n\n"
+                        f"Origin: {origin}\n"
+                        f"Destination: {destination}\n"
+                        f"Weather: {weather}\n\n"
+                        f"Thank you for using our Smart Logistics Platform!"
+                    )
                     if result['success']:
-                        st.success("Notification sent successfully!")
+                        st.success("Email notification sent successfully!")
                     else:
-                        st.error(f"Failed to send notification: {result['error']}")
+                        st.error(f"Failed to send email notification: {result.get('error', 'Unknown error')}")
 
                 st.success("New shipment created successfully!")
                 st.session_state.show_new_shipment = False

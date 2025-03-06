@@ -9,11 +9,49 @@ TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER")
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Add these environment variables
+EMAIL_SENDER = os.environ.get("EMAIL_SENDER", "")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "")
+EMAIL_SMTP_SERVER = os.environ.get("EMAIL_SMTP_SERVER", "smtp.gmail.com")
+EMAIL_SMTP_PORT = int(os.environ.get("EMAIL_SMTP_PORT", "587"))
+
 class NotificationManager:
     def __init__(self):
         self.twilio_client = None
         if all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER]):
             self.twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        
+        self.email_configured = all([EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_SMTP_SERVER])
+
+    def send_email_notification(self, to_email, subject, message):
+        """Send email notification"""
+        try:
+            if not self.email_configured:
+                return {"success": False, "error": "Email credentials not configured"}
+            
+            # Create the email
+            email_message = MIMEMultipart()
+            email_message['From'] = EMAIL_SENDER
+            email_message['To'] = to_email
+            email_message['Subject'] = subject
+            
+            # Add message body
+            email_message.attach(MIMEText(message, 'plain'))
+            
+            # Connect to SMTP server and send email
+            with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
+                server.starttls()  # Secure the connection
+                server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                server.send_message(email_message)
+            
+            return {"success": True}
+            
+        except Exception as e:
+            return {"success": False, "error": f"Failed to send email: {str(e)}"}
 
     def send_sms_notification(self, to_number, message):
         """Send SMS notification using Twilio with improved error handling"""
