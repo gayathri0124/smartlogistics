@@ -172,20 +172,37 @@ def main():
 
                 # Send notification if requested
                 if notify_customer and customer_email:
-                    notification_manager = NotificationManager()
-                    result = notification_manager.send_email_notification(
-                        customer_email,
-                        f"New Shipment Created: {new_data['shipment_id'].iloc[0]}",
-                        f"Your shipment {new_data['shipment_id'].iloc[0]} has been created.\n\n"
-                        f"Origin: {origin}\n"
-                        f"Destination: {destination}\n"
-                        f"Weather: {weather}\n\n"
-                        f"Thank you for using our Smart Logistics Platform!"
-                    )
-                    if result['success']:
-                        st.success("Email notification sent successfully!")
+                    st.info(f"Attempting to send email notification to {customer_email}...")
+                    
+                    # Check if email environment variables are set
+                    import os
+                    email_sender = os.environ.get("EMAIL_SENDER")
+                    email_password = os.environ.get("EMAIL_PASSWORD")
+                    email_smtp = os.environ.get("EMAIL_SMTP_SERVER")
+                    
+                    if not email_sender or not email_password or not email_smtp:
+                        st.error("Email credentials not configured properly in Secrets. Please set EMAIL_SENDER, EMAIL_PASSWORD, and EMAIL_SMTP_SERVER.")
+                        missing = []
+                        if not email_sender: missing.append("EMAIL_SENDER")
+                        if not email_password: missing.append("EMAIL_PASSWORD") 
+                        if not email_smtp: missing.append("EMAIL_SMTP_SERVER")
+                        st.error(f"Missing credentials: {', '.join(missing)}")
                     else:
-                        st.error(f"Failed to send email notification: {result.get('error', 'Unknown error')}")
+                        notification_manager = NotificationManager()
+                        result = notification_manager.send_email_notification(
+                            customer_email,
+                            f"New Shipment Created: {new_data['shipment_id'].iloc[0]}",
+                            f"Your shipment {new_data['shipment_id'].iloc[0]} has been created.\n\n"
+                            f"Origin: {origin}\n"
+                            f"Destination: {destination}\n"
+                            f"Weather: {weather}\n\n"
+                            f"Thank you for using our Smart Logistics Platform!"
+                        )
+                        if result['success']:
+                            st.success("Email notification sent successfully!")
+                        else:
+                            st.error(f"Failed to send email notification: {result.get('error', 'Unknown error')}")
+                            st.info("Please check that your email credentials are correct and that your email provider allows SMTP access.")
 
                 st.success("New shipment created successfully!")
                 st.session_state.show_new_shipment = False

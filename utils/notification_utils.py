@@ -30,9 +30,24 @@ class NotificationManager:
     def send_email_notification(self, to_email, subject, message):
         """Send email notification"""
         try:
+            # Check if email credentials are configured
+            if not EMAIL_SENDER or not EMAIL_PASSWORD:
+                return {"success": False, "error": "Email credentials not set. Please add EMAIL_SENDER and EMAIL_PASSWORD in Secrets tool."}
+                
+            if not EMAIL_SMTP_SERVER:
+                return {"success": False, "error": "SMTP server not configured. Please add EMAIL_SMTP_SERVER in Secrets tool."}
+                
             if not self.email_configured:
-                return {"success": False, "error": "Email credentials not configured"}
+                missing = []
+                if not EMAIL_SENDER: missing.append("EMAIL_SENDER")
+                if not EMAIL_PASSWORD: missing.append("EMAIL_PASSWORD")
+                if not EMAIL_SMTP_SERVER: missing.append("EMAIL_SMTP_SERVER")
+                return {"success": False, "error": f"Email credentials not fully configured. Missing: {', '.join(missing)}"}
             
+            # Validate email address format
+            if not to_email or '@' not in to_email:
+                return {"success": False, "error": f"Invalid email address format: {to_email}"}
+                
             # Create the email
             email_message = MIMEMultipart()
             email_message['From'] = EMAIL_SENDER
@@ -45,12 +60,16 @@ class NotificationManager:
             # Connect to SMTP server and send email
             with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as server:
                 server.starttls()  # Secure the connection
+                print(f"Attempting to login with {EMAIL_SENDER} to {EMAIL_SMTP_SERVER}:{EMAIL_SMTP_PORT}")
                 server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+                print(f"Sending email to {to_email}")
                 server.send_message(email_message)
+                print("Email sent successfully")
             
             return {"success": True}
             
         except Exception as e:
+            print(f"Email error: {str(e)}")
             return {"success": False, "error": f"Failed to send email: {str(e)}"}
 
     def send_sms_notification(self, to_number, message):
