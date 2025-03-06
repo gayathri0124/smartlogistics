@@ -6,16 +6,13 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 def render_analytics_page():
-    st.title("📊 Analytics Dashboard")
+    st.title("📊 Performance Analytics")
 
-    # Date range filter
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input("Start Date")
-    with col2:
-        end_date = st.date_input("End Date")
+    # Initialize session state if needed
+    if 'shipment_data' not in st.session_state:
+        from data.mock_shipments import generate_mock_data
+        st.session_state.shipment_data = generate_mock_data()
 
-    # Calculate metrics
     metrics = calculate_performance_metrics(st.session_state.shipment_data)
 
     # Display KPIs

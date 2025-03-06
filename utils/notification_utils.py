@@ -1,4 +1,3 @@
-
 import os
 import json
 import smtplib
@@ -11,36 +10,46 @@ class NotificationManager:
     def __init__(self):
         self.email_sender = os.environ.get("EMAIL_SENDER")
         self.email_password = os.environ.get("EMAIL_PASSWORD")
-        self.email_smtp = os.environ.get("EMAIL_SMTP_SERVER", "smtp.gmail.com")
-        self.email_port = int(os.environ.get("EMAIL_PORT", "587"))
-        
+        self.smtp_server = os.environ.get("EMAIL_SMTP_SERVER", "smtp.gmail.com")
+        self.smtp_port = int(os.environ.get("EMAIL_SMTP_PORT", "587"))
+
         # Create notifications directory if it doesn't exist
         Path("data/notifications").mkdir(parents=True, exist_ok=True)
-        
-    def send_email_notification(self, recipient, subject, body):
+
+    def send_email_notification(self, recipient, subject, message):
         """
-        Send email notification to the specified recipient
-        Returns dict with success status and error message if applicable
+        Send email notification to recipient
+
+        Args:
+            recipient (str): Email recipient
+            subject (str): Email subject
+            message (str): Email body
+
+        Returns:
+            dict: Result of email sending operation with success status and error if any
         """
         if not self.email_sender or not self.email_password:
             return {"success": False, "error": "Email credentials not configured"}
-        
+
         try:
+            # Create message
             msg = MIMEMultipart()
             msg['From'] = self.email_sender
             msg['To'] = recipient
             msg['Subject'] = subject
-            
-            msg.attach(MIMEText(body, 'plain'))
-            
-            with smtplib.SMTP(self.email_smtp, self.email_port) as server:
-                server.starttls()
-                server.login(self.email_sender, self.email_password)
-                server.send_message(msg)
-                
+
+            # Attach message body
+            msg.attach(MIMEText(message, 'plain'))
+
+            # Connect to server and send
+            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+            server.starttls()
+            server.login(self.email_sender, self.email_password)
+            server.send_message(msg)
+            server.quit()
+
             return {"success": True}
         except Exception as e:
-            logging.error(f"Failed to send email: {str(e)}")
             return {"success": False, "error": str(e)}
     
     def send_sms_notification(self, phone_number, message):
