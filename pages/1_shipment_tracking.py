@@ -8,6 +8,7 @@ import json
 
 def render_tracking_page():
     st.title("📍 Shipment Tracking")
+    # Notification settings removed from sidebar
 
     # Filters Section
     with st.expander("📊 Filter Shipments", expanded=False):
