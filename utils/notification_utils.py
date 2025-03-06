@@ -6,6 +6,10 @@ from email.mime.multipart import MIMEMultipart
 import logging
 from pathlib import Path
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, 
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 class NotificationManager:
     def __init__(self):
         self.email_sender = os.environ.get("EMAIL_SENDER")
@@ -28,7 +32,14 @@ class NotificationManager:
         Returns:
             dict: Result of email sending operation with success status and error if any
         """
+        # Debug information
+        logging.info(f"Attempting to send email to {recipient}")
+        logging.info(f"Using SMTP server: {self.smtp_server}:{self.smtp_port}")
+        logging.info(f"Email sender configured: {'Yes' if self.email_sender else 'No'}")
+        logging.info(f"Email password configured: {'Yes' if self.email_password else 'No'}")
+        
         if not self.email_sender or not self.email_password:
+            logging.error("Email credentials not configured")
             return {"success": False, "error": "Email credentials not configured"}
 
         try:
@@ -42,14 +53,19 @@ class NotificationManager:
             msg.attach(MIMEText(message, 'plain'))
 
             # Connect to server and send
+            logging.info(f"Connecting to SMTP server {self.smtp_server}:{self.smtp_port}")
             server = smtplib.SMTP(self.smtp_server, self.smtp_port)
             server.starttls()
+            logging.info(f"Logging in as {self.email_sender}")
             server.login(self.email_sender, self.email_password)
+            logging.info(f"Sending email to {recipient}")
             server.send_message(msg)
             server.quit()
+            logging.info("Email sent successfully")
 
             return {"success": True}
         except Exception as e:
+            logging.error(f"Email sending failed: {str(e)}")
             return {"success": False, "error": str(e)}
     
     def send_sms_notification(self, phone_number, message):

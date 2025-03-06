@@ -126,6 +126,26 @@ def main():
 
     # Show last refresh time
     st.caption(f"Last updated: {st.session_state.last_refresh.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Email configuration tester
+    with st.expander("Email Configuration Tester"):
+        st.write("Test your email configuration")
+        test_email = st.text_input("Test recipient email")
+        if st.button("Test Email Configuration"):
+            if test_email:
+                notification_manager = NotificationManager()
+                result = notification_manager.send_email_notification(
+                    test_email,
+                    "Test Email from Logistics Platform",
+                    "This is a test email from your Logistics Platform."
+                )
+                if result.get('success'):
+                    st.success("Email sent successfully!")
+                else:
+                    st.error(f"Failed to send email: {result.get('error')}")
+                    st.info("Make sure you've set the following environment variables in Replit Secrets: EMAIL_SENDER, EMAIL_PASSWORD, EMAIL_SMTP_SERVER")
+            else:
+                st.warning("Please enter an email address")
 
     # New Shipment Form
     if st.session_state.show_new_shipment:
