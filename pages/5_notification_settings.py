@@ -1,10 +1,10 @@
+
+# This page has been removed
 import streamlit as st
-from utils.notification_utils import NotificationManager
 
-def render_notification_settings():
-    st.title("⚙️ Notification Settings")
-
-    st.info("The notification feature has been removed from this application.")
+def removed_page():
+    st.title("Page Not Found")
+    st.error("This page has been removed from the application.")
 
 if __name__ == "__main__":
-    render_notification_settings()
+    removed_page()
